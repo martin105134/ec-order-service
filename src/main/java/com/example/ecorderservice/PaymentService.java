@@ -29,8 +29,13 @@ public class PaymentService {
                 .bodyToMono(String.class);
 
         String responseKey = paymentRequest.getOrderId() + (new Random().nextInt(1000));
-        response.subscribe(s -> redisTemplate.opsForValue().set(responseKey,"payment_id" + s));
+        redisTemplate.opsForValue().set(responseKey,"INTIATED");
+        response.subscribe(s -> redisTemplate.opsForValue().set(responseKey,"PROCESSED" + s));
 
         return responseKey;
+    }
+
+    public String getRedisValue(String key) {
+        return (String) redisTemplate.opsForValue().get(key);
     }
 }

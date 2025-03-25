@@ -27,8 +27,8 @@ public class MainRestController {
     @Autowired
     PaymentService paymentService;
 
-    @Autowired
-    RedisTemplate<Object, Object> redisTemplate;
+    /*@Autowired
+    RedisTemplate<Object, Object> redisTemplate;*/
 
     @PostMapping("/create")
     public ResponseEntity<?> createOrder(@RequestBody Order order, @RequestHeader("Authorization") String token, HttpServletResponse response, HttpServletRequest request) {
@@ -58,25 +58,18 @@ public class MainRestController {
                 return ResponseEntity.badRequest().body("Invalid token");
             }
         }else {
-            /*Cookie followup_cookie =  cookieList.stream().
-                    filter(cookie -> cookie.getName().equals("order-service-stage-1")).findAny().get();
+            Cookie followup_cookie =  cookieList.stream().
+                    filter(cookie -> cookie.getName().equals("order-first-stage")).findAny().get();
             String followup_cookie_key = followup_cookie.getValue();
-            String cacheResponse = (String)redisTemplate.opsForValue().get(followup_cookie_key);
-            if(cacheResponseArray[0].equals("stage1"))
-            {
+            String cacheResponse =paymentService.getRedisValue(followup_cookie_key);// (String)redisTemplate.opsForValue().get(followup_cookie_key);
+            if(cacheResponse.contains("INTIATED")){
                 log.info("Request still under process...");
-
                 return ResponseEntity.ok("Request still under process...");
-            }
-            else if(cacheResponseArray[0].equals("paymentid:orderid"))
-            {
-                return ResponseEntity.ok("Order Created Successfully with Order ID: " + order.getOrderid() + " and Payment ID: " + cacheResponseArray[1]);
-            }
-            else
-            {
+            }else if(cacheResponse.contains("PROCESSED")){
+                return ResponseEntity.ok("Order Created Successfully with Order ID: " + order.getOrderId() + " and Payment ID: " + cacheResponse.replace("PROCESSED", ""));
+            }else{
                 return ResponseEntity.ok("Error Processing the Order");
-            }*/
+            }
         }
-        return null;
     }
 }
