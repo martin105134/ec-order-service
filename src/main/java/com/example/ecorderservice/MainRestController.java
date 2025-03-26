@@ -50,6 +50,7 @@ public class MainRestController {
                 log.info("Token is valid");
                 order.setOrderId(String.valueOf(new Random().nextInt(1000)));
                 order.setOrderTotal(productService.calculateOrder(order));
+                order.setOrderStatus("PROCESSING");
                 orderRepo.save(order);
                 PaymentRequest paymentRequest = new PaymentRequest();
                 paymentRequest.setOrderId(order.getOrderId());
@@ -84,15 +85,26 @@ public class MainRestController {
                 response.addCookie(cookieStage1);
                 String paymentId = cacheResponse.replace("PROCESSED", "");
                 String [] data = paymentId.split(":");
-                kafkaProducer.sendMessage(data[1],
-                        "PROCESSED",
-                        "Order Processed Successfully for Order ID: " + data[1],
-                        "PAID",
-                        data[0]);
+//                kafkaProducer.sendMessage(data[1],
+//                        "PROCESSED",
+//                        "Order Processed Successfully for Order ID: " + data[1],
+//                        "PAID",
+//                        data[0]);
                 return ResponseEntity.ok("Order Created Successfully with Order ID: " + data[1] + " and Payment ID: " + data[0]);
             }else{
                 return ResponseEntity.ok("Error Processing the Order");
             }
+        }
+    }
+
+    @GetMapping("/{orderId}")
+    public ResponseEntity<?> getOrderDetails(@PathVariable String orderId) {
+        log.info("Retrieving order details");
+        Order order = orderRepo.findById(orderId).orElse(null);
+        if (order != null) {
+          return ResponseEntity.ok(order);
+        } else {
+           return ResponseEntity.ok(null);
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.example.ecorderservice;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -29,6 +30,9 @@ public class PaymentService {
     @Autowired
     OrderRepo orderRepo;
 
+    @Autowired
+    KafkaProducer kafkaProducer;
+
     public String createPayment(String token, PaymentRequest paymentRequest) {
         log.info("Create Payment..............");
         AtomicInteger retryCounter = new AtomicInteger(0);
@@ -37,7 +41,7 @@ public class PaymentService {
                 .body(BodyInserters.fromValue(paymentRequest))
                 .retrieve()
                 .bodyToMono(String.class)
-                .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(10))
+                .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(10))
                 .doBeforeRetry(retrySignal -> {retryCounter.incrementAndGet(); log.info("Retrying..."+retryCounter);})
                 .filter(throwable -> throwable instanceof RuntimeException));;
 
@@ -49,6 +53,17 @@ public class PaymentService {
             log.info("Order is successfully");
             String orderId = updateOrderStatus(responseKey,"PAID",s);
             redisTemplate.opsForValue().set(responseKey,"PROCESSED" + s +":" + orderId);
+
+            try {
+                kafkaProducer.sendMessage(orderId,
+                        "PROCESSED",
+                        "Order Processed Successfully for Order ID: " + orderId,
+                        "PAYMENT SUCCESSFUL",
+                        s);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+
         },
 e -> {
 
